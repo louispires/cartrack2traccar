@@ -1,0 +1,33 @@
+# Home Assistant Add-on: Cartrack to Traccar Bridge
+name: "Cartrack to Traccar Bridge"
+description: "Polls Cartrack Fleet API for vehicle positions and forwards them to a local Traccar server via the OsmAnd protocol."
+version: "1.0.0"
+slug: "cartrack2traccar"
+url: "https://github.com/louispires/cartrack2traccar"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: application
+boot: auto
+init: false
+options:
+  cartrack_username: ""
+  cartrack_password: ""
+  cartrack_region: "za"
+  traccar_host: "10.0.0.247"
+  traccar_osmand_port: 5055
+  poll_interval_seconds: 30
+  log_level: "info"
+schema:
+  cartrack_username: str
+  cartrack_password: password
+  cartrack_region: str
+  traccar_host: str
+  traccar_osmand_port: int
+  poll_interval_seconds: int
+  log_level: list(debug|info|warning|error)
+map:
+  - config:rw

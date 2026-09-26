@@ -1,0 +1,18 @@
+# Logs and SQLite databases
+*.log
+*.sqlite3*
+proxmox_mcp.log
+proxmox-jobs.sqlite3.*
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+traccar_page.html

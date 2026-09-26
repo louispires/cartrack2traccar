@@ -1,0 +1,329 @@
+views:
+- badges:
+  - entity: device_tracker.suzuki_jimny
+    show_icon: true
+    show_name: true
+    show_state: true
+    type: entity
+  - entity: device_tracker.isuzu_kb250
+    show_icon: true
+    show_name: true
+    show_state: true
+    type: entity
+  - entity: binary_sensor.isuzu_kb250_motion
+    name: Isuzu Motion
+    type: entity
+  - entity: binary_sensor.suzuki_jimny_motion
+    name: Jimny Motion
+    type: entity
+  icon: mdi:car-multiple
+  path: fleet
+  sections:
+  - cards:
+    - type: heading
+      heading: Live Fleet Map
+    - content: '### 🛰️ Traccar Fleet Tracking
+
+        **Live GPS Telemetry** &bull; Real-time tracking for **Isuzu KB250** and **Suzuki
+        Jimny**.
+
+        Self-hosted positioning, route trail history & power diagnostics.'
+      type: markdown
+    - type: map
+      show_all: false
+      entities:
+      - entity: device_tracker.suzuki_jimny
+        name: Suzuki Jimny
+      - entity: device_tracker.isuzu_kb250
+        name: Isuzu KB250
+      hours_to_show: 24
+      aspect_ratio: '16:9'
+      auto_fit: true
+      fit_zones: false
+      cluster: true
+      theme_mode: auto
+      scale_ruler: false
+  - cards:
+    - type: heading
+      heading: Suzuki Jimny
+      heading_style: title
+    - badges:
+      - color: teal
+        entity: device_tracker.suzuki_jimny
+      - color: green
+        entity: binary_sensor.suzuki_jimny_status
+      heading: Suzuki Jimny
+      heading_style: title
+      icon: mdi:car-estate
+      type: heading
+    - entity: sensor.suzuki_jimny_address
+      icon: mdi:map-marker-radius
+      name: Current Location
+      type: tile
+    - color: amber
+      entity: binary_sensor.suzuki_jimny_motion
+      icon: mdi:motion-sensor
+      name: Motion State
+      type: tile
+    - color: blue
+      entity: sensor.suzuki_jimny_speed
+      icon: mdi:speedometer
+      name: Vehicle Speed
+      type: tile
+    - color: cyan
+      entity: sensor.suzuki_jimny_altitude
+      icon: mdi:altimeter
+      name: Altitude
+      type: tile
+    - color: purple
+      entity: sensor.suzuki_jimny_supply_voltage
+      icon: mdi:car-battery
+      name: Supply Voltage
+      type: tile
+    - name: Open Suzuki Jimny Full Telemetry
+      navigation_path: /traccar-fleet/suzuki-jimny
+      tap_action:
+        action: navigate
+        navigation_path: /traccar-fleet/suzuki-jimny
+      type: button
+    - type: tile
+      entity: sensor.suzuki_jimny_battery
+      icon: ''
+      vertical: false
+      features_position: bottom
+  - cards:
+    - type: heading
+      heading: Isuzu KB250
+      heading_style: title
+    - badges:
+      - color: blue
+        entity: device_tracker.isuzu_kb250
+      - color: green
+        entity: binary_sensor.isuzu_kb250_status
+      heading: Isuzu KB250
+      heading_style: title
+      icon: mdi:truck-pickup
+      type: heading
+    - entity: sensor.isuzu_kb250_address
+      icon: mdi:map-marker-radius
+      name: Current Location
+      type: tile
+    - color: amber
+      entity: binary_sensor.isuzu_kb250_motion
+      icon: mdi:motion-sensor
+      name: Motion State
+      type: tile
+    - color: blue
+      entity: sensor.isuzu_kb250_speed
+      icon: mdi:speedometer
+      name: Vehicle Speed
+      type: tile
+    - color: cyan
+      entity: sensor.isuzu_kb250_altitude
+      icon: mdi:altimeter
+      name: Altitude
+      type: tile
+    - color: purple
+      entity: sensor.isuzu_kb250_supply_voltage
+      icon: mdi:car-battery
+      name: Supply Voltage
+      type: tile
+    - name: Open Isuzu KB250 Full Telemetry
+      navigation_path: /traccar-fleet/isuzu-kb250
+      tap_action:
+        action: navigate
+        navigation_path: /traccar-fleet/isuzu-kb250
+      type: button
+    - type: tile
+      entity: sensor.isuzu_kb250_battery
+      icon: ''
+      vertical: false
+      features_position: bottom
+  title: Fleet Overview
+  type: sections
+- badges:
+  - entity: device_tracker.suzuki_jimny
+    show_icon: true
+    show_name: true
+    show_state: true
+    type: entity
+  - entity: binary_sensor.suzuki_jimny_motion
+    type: entity
+  - entity: binary_sensor.suzuki_jimny_status
+    type: entity
+  - entity: sensor.suzuki_jimny_speed
+    type: entity
+  icon: mdi:car-estate
+  path: suzuki-jimny
+  sections:
+  - cards:
+    - type: heading
+      heading: Location & Route (48h)
+    - aspect_ratio: '16:9'
+      auto_fit: true
+      entities:
+      - entity: device_tracker.suzuki_jimny
+        name: Suzuki Jimny
+      hours_to_show: 48
+      theme_mode: dark
+      type: map
+    - entity: sensor.suzuki_jimny_address
+      icon: mdi:map-marker-radius
+      name: Geocoded Address
+      type: tile
+  - cards:
+    - type: heading
+      heading: Movement & Dynamics
+    - heading: Dynamics & Motion
+      heading_style: title
+      icon: mdi:speedometer
+      type: heading
+    - entity: sensor.suzuki_jimny_speed
+      max: 160
+      min: 0
+      name: Vehicle Speed
+      needle: true
+      severity:
+        green: 0
+        red: 120
+        yellow: 80
+      type: gauge
+    - color: amber
+      entity: binary_sensor.suzuki_jimny_motion
+      icon: mdi:motion-sensor
+      name: Motion Active
+      type: tile
+    - color: cyan
+      entity: sensor.suzuki_jimny_altitude
+      icon: mdi:altimeter
+      name: Altitude (Elevation)
+      type: tile
+  - cards:
+    - type: heading
+      heading: Power & Electrical System
+    - heading: Power & Connectivity
+      heading_style: title
+      icon: mdi:car-battery
+      type: heading
+    - entity: sensor.suzuki_jimny_supply_voltage
+      max: 16
+      min: 10
+      name: Supply Voltage
+      needle: true
+      severity:
+        green: 12.6
+        red: 11.8
+        yellow: 12.2
+      type: gauge
+    - type: tile
+      entity: sensor.suzuki_jimny_battery
+      icon: ''
+      vertical: false
+      features_position: bottom
+    - name: Back to Fleet Overview
+      navigation_path: /traccar-fleet/fleet
+      tap_action:
+        action: navigate
+        navigation_path: /traccar-fleet/fleet
+      type: button
+    - color: teal
+      entity: binary_sensor.suzuki_jimny_status
+      icon: mdi:cloud-check
+      name: Traccar Server Link Status
+      type: tile
+  title: Suzuki Jimny
+  type: sections
+- badges:
+  - entity: device_tracker.isuzu_kb250
+    show_icon: true
+    show_name: true
+    show_state: true
+    type: entity
+  - entity: binary_sensor.isuzu_kb250_motion
+    type: entity
+  - entity: binary_sensor.isuzu_kb250_status
+    type: entity
+  - entity: sensor.isuzu_kb250_speed
+    type: entity
+  icon: mdi:car-pickup
+  path: isuzu-kb250
+  sections:
+  - cards:
+    - type: heading
+      heading: Location & Route (48h)
+    - aspect_ratio: '16:9'
+      auto_fit: true
+      entities:
+      - entity: device_tracker.isuzu_kb250
+        name: Isuzu KB250
+      hours_to_show: 48
+      theme_mode: dark
+      type: map
+    - entity: sensor.isuzu_kb250_address
+      icon: mdi:map-marker-radius
+      name: Geocoded Address
+      type: tile
+  - cards:
+    - type: heading
+      heading: Movement & Dynamics
+    - heading: Dynamics & Motion
+      heading_style: title
+      icon: mdi:speedometer
+      type: heading
+    - entity: sensor.isuzu_kb250_speed
+      max: 160
+      min: 0
+      name: Vehicle Speed
+      needle: true
+      severity:
+        green: 0
+        red: 120
+        yellow: 80
+      type: gauge
+    - color: amber
+      entity: binary_sensor.isuzu_kb250_motion
+      icon: mdi:motion-sensor
+      name: Motion Active
+      type: tile
+    - color: cyan
+      entity: sensor.isuzu_kb250_altitude
+      icon: mdi:altimeter
+      name: Altitude (Elevation)
+      type: tile
+  - cards:
+    - type: heading
+      heading: Power & Electrical System
+    - heading: Power & Connectivity
+      heading_style: title
+      icon: mdi:car-battery
+      type: heading
+    - entity: sensor.isuzu_kb250_supply_voltage
+      max: 16
+      min: 10
+      name: Supply Voltage
+      needle: true
+      severity:
+        green: 12.6
+        red: 11.8
+        yellow: 12.2
+      type: gauge
+    - type: tile
+      entity: sensor.isuzu_kb250_battery
+      icon: ''
+      vertical: false
+      features_position: bottom
+    - name: Back to Fleet Overview
+      navigation_path: /traccar-fleet/fleet
+      tap_action:
+        action: navigate
+        navigation_path: /traccar-fleet/fleet
+      type: button
+    - color: teal
+      entity: binary_sensor.isuzu_kb250_status
+      icon: mdi:cloud-check
+      name: Traccar Server Link Status
+      type: tile
+  title: Isuzu KB250
+  type: sections
+  max_columns: 4
+  cards: []

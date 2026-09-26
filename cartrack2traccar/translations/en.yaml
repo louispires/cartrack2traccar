@@ -1,0 +1,22 @@
+configuration:
+  cartrack_username:
+    name: Cartrack Username
+    description: Your Cartrack API username (from Fleetweb API Settings)
+  cartrack_password:
+    name: Cartrack Password
+    description: Your Cartrack API password
+  cartrack_region:
+    name: Cartrack Region
+    description: "Two-letter country code (e.g. za, ng, ke, pt)"
+  traccar_host:
+    name: Traccar Host
+    description: "IP address or hostname of your Traccar server"
+  traccar_osmand_port:
+    name: Traccar OsmAnd Port
+    description: "Port for the OsmAnd protocol on Traccar (default: 5055)"
+  poll_interval_seconds:
+    name: Poll Interval
+    description: "How often to poll Cartrack for updates (in seconds)"
+  log_level:
+    name: Log Level
+    description: "Logging verbosity level"
