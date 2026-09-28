@@ -17,6 +17,9 @@ configuration:
   poll_interval_seconds:
     name: Poll Interval
     description: "How often to poll Cartrack for updates (in seconds)"
+  poll_interval_moving_seconds:
+    name: Poll Interval (Moving)
+    description: "Faster poll interval used while any vehicle has ignition on or is moving (in seconds). Cartrack allows 60 requests/minute."
   log_level:
     name: Log Level
     description: "Logging verbosity level"

@@ -33,6 +33,7 @@ to your local Traccar server using the OsmAnd HTTP protocol.
 | `traccar_host` | IP/hostname of your Traccar server | `10.0.0.247` |
 | `traccar_osmand_port` | Traccar OsmAnd protocol port | `5055` |
 | `poll_interval_seconds` | How often to poll Cartrack (seconds) | `30` |
+| `poll_interval_moving_seconds` | Faster poll interval while any vehicle has ignition on or is moving (seconds) | `5` |
 | `log_level` | Logging verbosity (`debug`, `info`, `warning`, `error`) | `info` |
 
 ## Prerequisites

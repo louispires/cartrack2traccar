@@ -12,6 +12,7 @@ Environment variables (set by run.sh from HA add-on config):
   TRACCAR_HOST              Traccar server hostname/IP
   TRACCAR_OSMAND_PORT       Traccar OsmAnd protocol port (default 5055)
   POLL_INTERVAL             Seconds between polls (default 30)
+  POLL_INTERVAL_MOVING      Seconds between polls while any vehicle is moving (default 5)
   LOG_LEVEL                 Logging level (debug/info/warning/error)
 """
 
@@ -34,6 +35,7 @@ CARTRACK_REGION = os.environ.get("CARTRACK_REGION", "za")
 TRACCAR_HOST = os.environ.get("TRACCAR_HOST", "10.0.0.247")
 TRACCAR_OSMAND_PORT = int(os.environ.get("TRACCAR_OSMAND_PORT", "5055"))
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "30"))
+POLL_INTERVAL_MOVING = max(1, int(os.environ.get("POLL_INTERVAL_MOVING", "5")))
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "info").upper()
 
 # Cartrack base URL — Kenya and Saudi Arabia use karooooo.com domain
@@ -117,6 +119,17 @@ def fetch_vehicle_status() -> list[dict]:
     if isinstance(body, dict):
         return body.get("data", body.get("vehicles", []))
     return []
+
+
+def is_moving(vehicle: dict) -> bool:
+    """True if the vehicle has ignition on or a non-zero speed."""
+    ignition = vehicle.get("ignition")
+    if ignition is not None and str(ignition).strip().lower() in ("true", "1", "on", "yes"):
+        return True
+    try:
+        return float(vehicle.get("speed") or 0) > 0
+    except (ValueError, TypeError):
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +292,7 @@ def main():
     log.info("  Cartrack region : %s", CARTRACK_REGION)
     log.info("  Cartrack API URL: %s", CARTRACK_BASE_URL)
     log.info("  Traccar OsmAnd  : %s", TRACCAR_OSMAND_URL)
-    log.info("  Poll interval   : %ds", POLL_INTERVAL)
+    log.info("  Poll interval   : %ds (moving: %ds)", POLL_INTERVAL, POLL_INTERVAL_MOVING)
     log.info("=" * 60)
 
     if not CARTRACK_USERNAME or not CARTRACK_PASSWORD:
@@ -287,6 +300,7 @@ def main():
         sys.exit(1)
 
     consecutive_errors = 0
+    moving = False
 
     while True:
         try:
@@ -297,6 +311,15 @@ def main():
                 for v in vehicles:
                     if forward_to_traccar(v):
                         success_count += 1
+
+                now_moving = any(is_moving(v) for v in vehicles)
+                if now_moving != moving:
+                    log.info(
+                        "Vehicle motion %s — polling every %ds",
+                        "detected" if now_moving else "stopped",
+                        POLL_INTERVAL_MOVING if now_moving else POLL_INTERVAL,
+                    )
+                moving = now_moving
 
                 log.info(
                     "Poll complete: %d/%d vehicles forwarded to Traccar",
@@ -318,7 +341,7 @@ def main():
             log.info("Backing off for %ds (consecutive errors: %d)", backoff, consecutive_errors)
             time.sleep(backoff)
         else:
-            time.sleep(POLL_INTERVAL)
+            time.sleep(POLL_INTERVAL_MOVING if moving else POLL_INTERVAL)
 
 
 if __name__ == "__main__":
