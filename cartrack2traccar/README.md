@@ -41,3 +41,9 @@ to your local Traccar server using the OsmAnd HTTP protocol.
 
 - Your Traccar server must have the OsmAnd protocol enabled on port 5055
 - You need valid Cartrack API credentials (generated from Fleetweb → Settings → API Settings)
+
+## Support
+
+If you find this add-on helpful, consider supporting the project:
+
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/louispires)
