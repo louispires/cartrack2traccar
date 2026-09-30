@@ -64,6 +64,7 @@ traccar_host: "10.0.0.247"       # IP or hostname of your Traccar instance
 traccar_osmand_port: 5055        # Default OsmAnd port
 poll_interval_seconds: 30        # Polling frequency while parked
 poll_interval_moving_seconds: 5  # Polling frequency while a vehicle is moving
+stale_timeout_seconds: 180       # Mark vehicle stationary if telemetry stops (e.g. underground parking)
 log_level: "info"
 ```
 

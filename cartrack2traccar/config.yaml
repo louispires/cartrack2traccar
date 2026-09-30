@@ -1,7 +1,7 @@
 # Home Assistant Add-on: Cartrack to Traccar Bridge
 name: "Cartrack to Traccar Bridge"
 description: "Polls Cartrack Fleet API for vehicle positions and forwards them to a local Traccar server via the OsmAnd protocol."
-version: "1.1.0"
+version: "1.2.0"
 slug: "cartrack2traccar"
 url: "https://github.com/louispires/cartrack2traccar"
 arch:
@@ -21,6 +21,7 @@ options:
   traccar_osmand_port: 5055
   poll_interval_seconds: 30
   poll_interval_moving_seconds: 5
+  stale_timeout_seconds: 180
   log_level: "info"
 schema:
   cartrack_username: str
@@ -30,6 +31,7 @@ schema:
   traccar_osmand_port: int
   poll_interval_seconds: int
   poll_interval_moving_seconds: int(1,)
+  stale_timeout_seconds: int(30,)
   log_level: list(debug|info|warning|error)
 map:
   - config:rw

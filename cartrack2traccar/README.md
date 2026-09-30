@@ -34,6 +34,7 @@ to your local Traccar server using the OsmAnd HTTP protocol.
 | `traccar_osmand_port` | Traccar OsmAnd protocol port | `5055` |
 | `poll_interval_seconds` | How often to poll Cartrack (seconds) | `30` |
 | `poll_interval_moving_seconds` | Faster poll interval while any vehicle has ignition on or is moving (seconds) | `5` |
+| `stale_timeout_seconds` | Seconds before a vehicle is marked stationary when telemetry stops updating (e.g. underground parking) | `180` |
 | `log_level` | Logging verbosity (`debug`, `info`, `warning`, `error`) | `info` |
 
 ## Prerequisites

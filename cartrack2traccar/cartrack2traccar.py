@@ -13,11 +13,13 @@ Environment variables (set by run.sh from HA add-on config):
   TRACCAR_OSMAND_PORT       Traccar OsmAnd protocol port (default 5055)
   POLL_INTERVAL             Seconds between polls (default 30)
   POLL_INTERVAL_MOVING      Seconds between polls while any vehicle is moving (default 5)
+  STALE_TIMEOUT             Seconds before stale vehicle is marked stationary (default 180)
   LOG_LEVEL                 Logging level (debug/info/warning/error)
 """
 
 import logging
 import os
+import re
 import sys
 import time
 import urllib.parse
@@ -36,6 +38,7 @@ TRACCAR_HOST = os.environ.get("TRACCAR_HOST", "10.0.0.247")
 TRACCAR_OSMAND_PORT = int(os.environ.get("TRACCAR_OSMAND_PORT", "5055"))
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "30"))
 POLL_INTERVAL_MOVING = max(1, int(os.environ.get("POLL_INTERVAL_MOVING", "5")))
+STALE_TIMEOUT = max(30, int(os.environ.get("STALE_TIMEOUT", "180")))
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "info").upper()
 
 # Cartrack base URL — Kenya and Saudi Arabia use karooooo.com domain
@@ -121,8 +124,37 @@ def fetch_vehicle_status() -> list[dict]:
     return []
 
 
-def is_moving(vehicle: dict) -> bool:
-    """True if the vehicle has ignition on or a non-zero speed."""
+def parse_vehicle_timestamp(vehicle: dict) -> int:
+    """Extract and parse the epoch timestamp (seconds) from vehicle telemetry."""
+    loc = vehicle.get("location") if isinstance(vehicle.get("location"), dict) else {}
+    ts_raw = (
+        loc.get("updated")
+        or vehicle.get("event_ts")
+        or vehicle.get("timestamp")
+        or vehicle.get("lastUpdated")
+        or vehicle.get("gpsTimestamp")
+        or vehicle.get("last_updated")
+    )
+    if not ts_raw:
+        return 0
+
+    s = str(ts_raw).strip()
+    try:
+        return int(float(s))
+    except (ValueError, TypeError):
+        pass
+
+    try:
+        clean = s.replace("Z", "+00:00").replace(" ", "T")
+        clean = re.sub(r"([+-]\d{2})$", r"\1:00", clean)
+        dt = datetime.fromisoformat(clean)
+        return int(dt.timestamp())
+    except (ValueError, TypeError):
+        return 0
+
+
+def is_vehicle_reporting_movement(vehicle: dict) -> bool:
+    """True if the vehicle payload reports ignition on or non-zero speed."""
     ignition = vehicle.get("ignition")
     if ignition is not None and str(ignition).strip().lower() in ("true", "1", "on", "yes"):
         return True
@@ -132,12 +164,31 @@ def is_moving(vehicle: dict) -> bool:
         return False
 
 
+def is_moving(vehicle: dict, now: float | None = None) -> bool:
+    """
+    True if the vehicle has ignition on or non-zero speed, AND the telemetry is fresh.
+    Vehicles whose telemetry has not updated within STALE_TIMEOUT seconds are considered stationary.
+    """
+    if not is_vehicle_reporting_movement(vehicle):
+        return False
+
+    ts = parse_vehicle_timestamp(vehicle)
+    if not ts:
+        return True
+
+    now = now or time.time()
+    return (now - ts) <= STALE_TIMEOUT
+
+
 # ---------------------------------------------------------------------------
 # Traccar OsmAnd forwarder
 # ---------------------------------------------------------------------------
 
 # Persistent HTTP session for Traccar forwarding
 _traccar_session = requests.Session()
+
+# Track vehicle ID -> last stale event timestamp for which a stationary stop was sent to Traccar
+_stale_stopped_sent: dict[str, int] = {}
 
 
 def forward_to_traccar(vehicle: dict) -> bool:
@@ -172,66 +223,80 @@ def forward_to_traccar(vehicle: dict) -> bool:
         log.debug("Skipping %s — no coordinates in vehicle payload: %s", device_id, vehicle)
         return False
 
-    # Parse timestamp
-    ts_raw = (
-        loc.get("updated")
-        or vehicle.get("event_ts")
-        or vehicle.get("timestamp")
-        or vehicle.get("lastUpdated")
-        or vehicle.get("gpsTimestamp")
-        or vehicle.get("last_updated")
-    )
-    if ts_raw:
-        # Try parsing ISO/date format, or pass raw timestamp
-        try:
-            # Handle space-separated date and tz, e.g. "2023-01-01 12:00:00+00:00"
-            clean_ts = str(ts_raw).replace("Z", "+00:00").replace(" ", "T")
-            ts = int(datetime.fromisoformat(clean_ts).timestamp())
-        except (ValueError, TypeError):
-            try:
-                ts = int(float(ts_raw))
-            except (ValueError, TypeError):
-                ts = int(time.time())
+    now = time.time()
+    ts = parse_vehicle_timestamp(vehicle) or int(now)
+    age = now - ts
+    reports_moving = is_vehicle_reporting_movement(vehicle)
+    is_stale = age > STALE_TIMEOUT
+
+    # Check for vehicles that went offline while moving (e.g. underground parking)
+    if is_stale and reports_moving:
+        if _stale_stopped_sent.get(device_id) == ts:
+            log.debug(
+                "Vehicle %s telemetry is stale (%ds old) — stationary stop already sent, skipping",
+                device_id,
+                int(age),
+            )
+            return True
+
+        # Send a synthetic stationary stop to Traccar
+        log.info(
+            "Vehicle %s telemetry is stale (%ds old) while reported moving (e.g. underground parking) — sending stationary stop to Traccar",
+            device_id,
+            int(age),
+        )
+        stop_ts = min(int(now), ts + STALE_TIMEOUT)
+        params = {
+            "id": device_id,
+            "lat": float(lat),
+            "lon": float(lon),
+            "timestamp": stop_ts,
+            "valid": "true",
+            "speed": 0.0,
+            "ignition": "false",
+            "motion": "false",
+        }
     else:
-        ts = int(time.time())
+        # Fresh telemetry, or vehicle was already reported stopped
+        if device_id in _stale_stopped_sent and not is_stale:
+            _stale_stopped_sent.pop(device_id, None)
 
-    # Build OsmAnd query parameters
-    params = {
-        "id": device_id,
-        "lat": float(lat),
-        "lon": float(lon),
-        "timestamp": ts,
-        "valid": "true",
-    }
+        params = {
+            "id": device_id,
+            "lat": float(lat),
+            "lon": float(lon),
+            "timestamp": ts,
+            "valid": "true",
+            "motion": "true" if reports_moving else "false",
+        }
 
-    # Optional fields
-    speed = vehicle.get("speed")
-    if speed is not None:
-        try:
-            # Cartrack returns km/h; Traccar OsmAnd default unit is knots
-            params["speed"] = round(float(speed) * 0.539957, 2)
-        except (ValueError, TypeError):
-            pass
+        speed = vehicle.get("speed")
+        if speed is not None:
+            try:
+                # Cartrack returns km/h; Traccar OsmAnd default unit is knots
+                params["speed"] = round(float(speed) * 0.539957, 2)
+            except (ValueError, TypeError):
+                pass
 
-    heading = vehicle.get("bearing") or vehicle.get("heading") or vehicle.get("direction")
-    if heading is not None:
-        try:
-            params["bearing"] = float(heading)
-        except (ValueError, TypeError):
-            pass
+        heading = vehicle.get("bearing") or vehicle.get("heading") or vehicle.get("direction")
+        if heading is not None:
+            try:
+                params["bearing"] = float(heading)
+            except (ValueError, TypeError):
+                pass
 
-    altitude = vehicle.get("altitude")
-    if altitude is not None:
-        try:
-            params["altitude"] = float(altitude)
-        except (ValueError, TypeError):
-            pass
+        altitude = vehicle.get("altitude")
+        if altitude is not None:
+            try:
+                params["altitude"] = float(altitude)
+            except (ValueError, TypeError):
+                pass
 
-    # Forward custom attributes
-    ignition = vehicle.get("ignition")
-    if ignition is not None:
-        params["ignition"] = str(ignition).lower()
+        ignition = vehicle.get("ignition")
+        if ignition is not None:
+            params["ignition"] = str(ignition).lower()
 
+    # Common attributes for both fresh and synthetic stopped positions
     odometer = vehicle.get("odometer") or vehicle.get("mileage")
     if odometer is not None:
         try:
@@ -241,7 +306,6 @@ def forward_to_traccar(vehicle: dict) -> bool:
         except (ValueError, TypeError):
             pass
 
-    # Battery (TCU battery percentage)
     batt = vehicle.get("tcu_percentage") or vehicle.get("tcu_battery_percentage")
     if batt is not None:
         try:
@@ -249,7 +313,6 @@ def forward_to_traccar(vehicle: dict) -> bool:
         except (ValueError, TypeError):
             pass
 
-    # External battery voltage
     vext = vehicle.get("vext")
     if vext is not None:
         try:
@@ -257,7 +320,6 @@ def forward_to_traccar(vehicle: dict) -> bool:
         except (ValueError, TypeError):
             pass
 
-    # Position description / address from Cartrack
     pos_desc = loc.get("position_description")
     if pos_desc:
         params["address"] = pos_desc
@@ -266,7 +328,9 @@ def forward_to_traccar(vehicle: dict) -> bool:
     try:
         resp = _traccar_session.get(TRACCAR_OSMAND_URL, params=params, timeout=10)
         if resp.status_code == 200:
-            log.debug("Forwarded %s → Traccar (lat=%.5f lon=%.5f)", device_id, float(lat), float(lon))
+            if is_stale and reports_moving:
+                _stale_stopped_sent[device_id] = ts
+            log.debug("Forwarded %s -> Traccar (lat=%.5f lon=%.5f)", device_id, float(lat), float(lon))
             return True
         else:
             log.warning(
@@ -288,11 +352,12 @@ def forward_to_traccar(vehicle: dict) -> bool:
 
 def main():
     log.info("=" * 60)
-    log.info("Cartrack → Traccar Bridge starting")
+    log.info("Cartrack -> Traccar Bridge starting")
     log.info("  Cartrack region : %s", CARTRACK_REGION)
     log.info("  Cartrack API URL: %s", CARTRACK_BASE_URL)
     log.info("  Traccar OsmAnd  : %s", TRACCAR_OSMAND_URL)
     log.info("  Poll interval   : %ds (moving: %ds)", POLL_INTERVAL, POLL_INTERVAL_MOVING)
+    log.info("  Stale timeout   : %ds", STALE_TIMEOUT)
     log.info("=" * 60)
 
     if not CARTRACK_USERNAME or not CARTRACK_PASSWORD:
@@ -307,12 +372,13 @@ def main():
             vehicles = fetch_vehicle_status()
 
             if vehicles:
+                now = time.time()
                 success_count = 0
                 for v in vehicles:
                     if forward_to_traccar(v):
                         success_count += 1
 
-                now_moving = any(is_moving(v) for v in vehicles)
+                now_moving = any(is_moving(v, now=now) for v in vehicles)
                 if now_moving != moving:
                     log.info(
                         "Vehicle motion %s — polling every %ds",
