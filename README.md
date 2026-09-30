@@ -3,6 +3,7 @@
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Add--on-blue.svg)](https://www.home-assistant.io/)
 [![Traccar](https://img.shields.io/badge/Traccar-GPS%20Tracking-orange.svg)](https://www.traccar.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-yellow.svg?logo=buy-me-a-coffee)](https://buymeacoffee.com/louispires)
 
 A complete fleet tracking solution integrating **Cartrack** GPS tracking into **Traccar** and **Home Assistant**.
 
@@ -103,6 +104,14 @@ The dashboard configuration is located in [`dashboards/traccar-fleet-dashboard.y
   * Analog speedometer needle gauge with speed ranges.
   * Electrical diagnostics gauge (Supply/Alternator Voltage with low-battery warning thresholds).
   * Tracker backup battery level & Traccar server link status.
+
+---
+
+## 💖 Support / Sponsor
+
+If you find this project useful and would like to support its ongoing development:
+
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/louispires)
 
 ---
 
